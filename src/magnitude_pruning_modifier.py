@@ -19,8 +19,8 @@ class MagnitudePruningModifier:
         model, 
         init_sparsity: float,
         final_sparsity: float,
-        start_epoch: int,
-        end_epoch: int,
+        start_step: int,
+        end_step: int,
         update_frequency: int,
         prunable_params: str = "__ALL__",
         comp_scores_on_cpu: bool = False,
@@ -28,8 +28,8 @@ class MagnitudePruningModifier:
         inter_pow: float = 3.0
     ):
         # pruning schedule
-        self.start_epoch = start_epoch
-        self.end_epoch = end_epoch
+        self.start_step = start_step
+        self.end_step = end_step
         self.init_sparsity = init_sparsity
         self.final_sparsity = final_sparsity
         self.update_frequency = update_frequency
@@ -51,7 +51,7 @@ class MagnitudePruningModifier:
         self.current_sparsity = 0.0
 
     def check_mask_update(self, epoch: int):
-        if (epoch - self.start_epoch) % self.update_frequency > 0:
+        if (epoch - self.start_step) % self.update_frequency > 0:
             return 
         else:
             self.set_current_sparsity(epoch)
@@ -63,8 +63,8 @@ class MagnitudePruningModifier:
             self.inter_pow,
             self.init_sparsity,
             self.final_sparsity,
-            self.start_epoch,
-            self.end_epoch
+            self.start_step,
+            self.end_step
         )
 
     @torch.no_grad()
