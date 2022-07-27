@@ -139,11 +139,12 @@ def main():
 
     # Create pruning modifier
     pruning_modifier = MagnitudePruningModifier(
+        model=model,
         init_sparsity=sparse_args.init_sparsity,
         final_sparsity=sparse_args.final_sparsity,
-        start_epoch=(sparse_args.start_epoch if sparse_args.start_epoch >=0 else 0),
-        end_epoch=(sparse_args.end_epoch if sparse_args.end_epoch >=0 else training_args.num_train_epochs),
-        update_frequency=(sparse_args.update_frequency if sparse_args.update_frequency >=0 else 1),
+        start_step=sparse_args.start_step,
+        end_step=(sparse_args.end_step if sparse_args.end_step >=0 else training_args.max_steps),
+        update_frequency=sparse_args.update_frequency,
         prunable_params=sparse_args.prunable_params,
         comp_scores_on_cpu=sparse_args.comp_scores_on_cpu,
         global_sparsity=sparse_args.global_sparsity,

@@ -62,16 +62,16 @@ class SparsificationArguments:
     final_sparsity: float  = field(
         metadata={"help": "Final sparsity."},
     )
-    start_epoch: Optional[int] = field(
-        default=-1, 
+    start_step: Optional[int] = field(
+        default=0, 
         metadata={"help": "Start epoch of the pruning procedure."},
     )
-    end_epoch: Optional[int] = field(
+    end_step: Optional[int] = field(
         default=-1, 
         metadata={"help": "End epoch of pruning."},
     )
     update_frequency: int = field(
-        default=-1, 
+        default=100, 
         metadata={"help": "Frequency of pruning updates."},
     )
     prunable_params: Optional[str] = field(
