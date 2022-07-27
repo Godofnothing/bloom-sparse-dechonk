@@ -16,8 +16,11 @@ from transformers import AutoTokenizer, HfArgumentParser, TrainingArguments, is_
 from transformers.trainer_utils import get_last_checkpoint
 
 import src.overrides
-from src.arguments import DataTrainingArguments, ModelArguments
+from src.arguments import DataTrainingArguments, ModelArguments, SparsificationArguments
 from src.data import get_tokenized_lm_datasets, WrappedIterableDataset
+from src.magnitude_pruning_modifier import MagnitudePruningModifier
+from src.pruning_callback import PruningCallback
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +43,13 @@ def main():
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
-    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
-    model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+    parser = HfArgumentParser((
+        ModelArguments, 
+        DataTrainingArguments, 
+        SparsificationArguments, 
+        TrainingArguments
+    ))
+    model_args, data_args, sparse_args, training_args = parser.parse_args_into_dataclasses()
 
     # Setup logging
     logging.basicConfig(
@@ -129,6 +137,19 @@ def main():
             preds = preds[:, :-1].reshape(-1)
             return metric.compute(predictions=preds, references=labels)
 
+    # Create pruning modifier
+    pruning_modifier = MagnitudePruningModifier(
+        init_sparsity=sparse_args.init_sparsity,
+        final_sparsity=sparse_args.final_sparsity,
+        start_epoch=(sparse_args.start_epoch if sparse_args.start_epoch >=0 else 0),
+        end_epoch=(sparse_args.end_epoch if sparse_args.end_epoch >=0 else training_args.num_train_epochs),
+        update_frequency=(sparse_args.update_frequency if sparse_args.update_frequency >=0 else 1),
+        prunable_params=sparse_args.prunable_params,
+        comp_scores_on_cpu=sparse_args.comp_scores_on_cpu,
+        global_sparsity=sparse_args.global_sparsity,
+        inter_pow=sparse_args.inter_pow
+    )
+
     # Initialize our Trainer
     trainer = TrainerWithSubsetEval(
         model=model,
@@ -141,8 +162,8 @@ def main():
         data_collator=data_collator,
         compute_metrics=compute_metrics if training_args.do_eval and not is_torch_tpu_available() else None,
         preprocess_logits_for_metrics=preprocess_logits_for_metrics
-        if training_args.do_eval and not is_torch_tpu_available()
-        else None,
+        if training_args.do_eval and not is_torch_tpu_available() else None,
+        callbacks=[PruningCallback(pruning_modifier)]
     )
 
     # Training

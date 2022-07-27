@@ -50,3 +50,43 @@ class DataTrainingArguments:
     keep_linebreaks: bool = field(
         default=True, metadata={"help": "Whether to keep line breaks when using TXT files or not."}
     )
+
+@dataclass
+class SparsificationArguments:
+    '''
+    Arguments specifying the parameters of the pruning modifier.
+    '''
+    init_sparsity:  float = field(
+        metadata={"help": "Init sparsity."},
+    )
+    final_sparsity: float  = field(
+        metadata={"help": "Final sparsity."},
+    )
+    start_epoch: Optional[int] = field(
+        default=-1, 
+        metadata={"help": "Start epoch of the pruning procedure."},
+    )
+    end_epoch: Optional[int] = field(
+        default=-1, 
+        metadata={"help": "End epoch of pruning."},
+    )
+    update_frequency: int = field(
+        default=-1, 
+        metadata={"help": "Frequency of pruning updates."},
+    )
+    prunable_params: Optional[str] = field(
+        default="__ALL__", 
+        metadata={"help": "Which params to prune (str, regular expression or __ALL__)"}
+    )
+    comp_scores_on_cpu: bool = field(
+        default=False, 
+        metadata={"help": "Whether to compute scores on CPU"}
+    )
+    global_sparsity: bool = field(
+        default=False, 
+        metadata={"help": "Whether the sparsity is global"}
+    )
+    inter_pow: float = field(
+        default=3.0, 
+        metadata={"help": "Interpolation power in the sparsity schedule"}
+    )
