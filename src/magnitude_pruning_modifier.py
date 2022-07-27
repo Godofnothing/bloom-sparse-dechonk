@@ -33,6 +33,7 @@ class MagnitudePruningModifier:
         self.init_sparsity = init_sparsity
         self.final_sparsity = final_sparsity
         self.update_frequency = update_frequency
+        self.prunable_params = prunable_params
         self.comp_scores_on_cpu = comp_scores_on_cpu
         self.global_sparsity = global_sparsity
         self.inter_pow = inter_pow
@@ -40,15 +41,17 @@ class MagnitudePruningModifier:
         self.hooks  = {}
         self.masks  = {}
         self.params = {}
+        # set current sparsity
+        self.current_sparsity = 0.0
+
+    def initialize(self, model):
         for param_name, param in model.named_parameters():
-            if prunable_params == "__ALL__" or re.search(prunable_params, param_name):
+            if self.prunable_params == "__ALL__" or re.search(self.prunable_params, param_name):
                 mask = torch.ones(param.shape, dtype=torch.bool, device=param.device)
 
                 self.masks[param_name]  = mask
                 self.hooks[param_name]  = param.register_hook(partial(mask_gradient_hook, mask))
                 self.params[param_name] = param
-        # set current sparsity
-        self.current_sparsity = 0.0
 
     def check_mask_update(self, epoch: int):
         if (epoch - self.start_step) % self.update_frequency > 0:
@@ -77,7 +80,7 @@ class MagnitudePruningModifier:
             scores = torch.cat(scores)
             threshold, _ = torch.kthvalue(scores, k=int(len(scores) * self.current_sparsity))
             for param_name, param in self.params.items():
-                mask = param.abs() > threshold
+                mask = (param.abs() > threshold)
                 param.data = param * mask
 
                 self.masks[param_name] = mask
