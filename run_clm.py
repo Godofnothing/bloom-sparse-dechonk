@@ -148,7 +148,8 @@ def main():
         prunable_params=sparse_args.prunable_params,
         comp_scores_on_cpu=sparse_args.comp_scores_on_cpu,
         global_sparsity=sparse_args.global_sparsity,
-        inter_pow=sparse_args.inter_pow
+        inter_pow=sparse_args.inter_pow,
+        log_wandb=(training_args.report_to == 'wandb' and training_args.local_rank == 0)
     )
 
     # Initialize our Trainer
