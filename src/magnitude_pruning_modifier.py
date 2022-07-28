@@ -1,5 +1,6 @@
 import re
 import torch
+import wandb
 
 from functools import partial
 
@@ -8,6 +9,7 @@ def mask_gradient_hook(grad, mask):
     return mask * grad
 
 def polynomial_inter(step, pow, init_value, final_value, init_step, final_step):
+    assert init_step < final_step, "init step has to be smaller than the final one"
     step = min(max(step, init_step), final_step)
     return init_value + (final_value - init_value) * ((step - init_step) / (final_step - init_step)) ** (1 / pow)
 
@@ -25,7 +27,8 @@ class MagnitudePruningModifier:
         prunable_params: str = "__ALL__",
         comp_scores_on_cpu: bool = False,
         global_sparsity: bool = False,
-        inter_pow: float = 3.0
+        inter_pow: float = 3.0,
+        log_wandb: bool = False
     ):
         # pruning schedule
         self.start_step = start_step
@@ -37,6 +40,7 @@ class MagnitudePruningModifier:
         self.comp_scores_on_cpu = comp_scores_on_cpu
         self.global_sparsity = global_sparsity
         self.inter_pow = inter_pow
+        self.log_wandb = log_wandb
         # pruning hooks
         self.hooks  = {}
         self.masks  = {}
@@ -53,11 +57,14 @@ class MagnitudePruningModifier:
                 self.hooks[param_name]  = param.register_hook(partial(mask_gradient_hook, mask))
                 self.params[param_name] = param
 
-    def check_mask_update(self, epoch: int):
-        if (epoch - self.start_step) % self.update_frequency > 0:
+    def check_mask_update(self, step: int):
+        if (step - self.start_step) % self.update_frequency > 0:
             return 
         else:
-            self.set_current_sparsity(epoch)
+            self.set_current_sparsity(step)
+            if self.log_wandb:
+                wandb.log({'sparsity': self.current_sparsity}, step=step)
+                
             self.mask_update()
 
     def set_current_sparsity(self, epoch):
@@ -72,6 +79,10 @@ class MagnitudePruningModifier:
 
     @torch.no_grad()
     def mask_update(self):
+        # do nothing for 0 sparsity
+        if self.current_sparsity == 0:
+            return
+
         if self.global_sparsity:
             scores = []
             for param_name, param in self.params.items():
