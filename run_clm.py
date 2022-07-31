@@ -139,7 +139,6 @@ def main():
 
     # Create pruning modifier
     pruning_modifier = MagnitudePruningModifier(
-        model=model,
         init_sparsity=sparse_args.init_sparsity,
         final_sparsity=sparse_args.final_sparsity,
         start_step=sparse_args.start_step,
