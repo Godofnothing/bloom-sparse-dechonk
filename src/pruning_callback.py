@@ -4,7 +4,7 @@ from transformers import TrainerCallback
 
 
 def sparsity(x):
-    return (1 - torch.nonzero(x) / x.numel()).item()
+    return (1 - torch.count_nonzero(x) / x.numel()).item()
 
 
 class PruningCallback(TrainerCallback):
