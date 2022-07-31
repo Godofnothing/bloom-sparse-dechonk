@@ -90,3 +90,8 @@ class SparsificationArguments:
         default=3.0, 
         metadata={"help": "Interpolation power in the sparsity schedule"}
     )
+    # debug args
+    callback_log_freq: int = field(
+        default=-1, 
+        metadata={"help": "Sparsity logging frequency."},
+    )

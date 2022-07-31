@@ -18,7 +18,6 @@ class MagnitudePruningModifier:
 
     def __init__(
         self,
-        model, 
         init_sparsity: float,
         final_sparsity: float,
         start_step: int,

@@ -165,7 +165,7 @@ def main():
         compute_metrics=compute_metrics if training_args.do_eval and not is_torch_tpu_available() else None,
         preprocess_logits_for_metrics=preprocess_logits_for_metrics
         if training_args.do_eval and not is_torch_tpu_available() else None,
-        callbacks=[PruningCallback(pruning_modifier)]
+        callbacks=[PruningCallback(pruning_modifier, sparse_args.callback_log_freq)]
     )
 
     # Training
