@@ -19,7 +19,7 @@ class PruningCallback(TrainerCallback):
 
     def on_step_begin(self, args, state, control, **kwargs):
         self.pruning_modifier.check_mask_update(state.global_step)
-        if args.global_step % self.log_frequency and args.local_rank == 0:
+        if state.global_step % self.log_frequency == 0 and args.local_rank == 0:
             print('-' * 10)
             print('Param sparsities')
             for param_name, param in self.pruning_modifier.params.items():
