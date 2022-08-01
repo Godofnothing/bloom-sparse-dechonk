@@ -95,7 +95,7 @@ class MagnitudePruningModifier:
 
                 self.masks[param_name] = mask
                 self.hooks[param_name].remove()
-                self.hooks[param_name]  = param.register_hook(partial(mask_gradient_hook, mask))
+                self.hooks[param_name]  = param.register_hook(partial(mask_gradient_hook, mask=mask))
         else:
             for param_name, param in self.params.items():
                 scores = param.abs().view(-1)
@@ -106,7 +106,7 @@ class MagnitudePruningModifier:
 
                 self.masks[param_name] = mask
                 self.hooks[param_name].remove()
-                self.hooks[param_name] = param.register_hook(partial(mask_gradient_hook, mask))
+                self.hooks[param_name] = param.register_hook(partial(mask_gradient_hook, mask=mask))
 
     def finalize(self):
         for _, hook in self.hooks.items():
