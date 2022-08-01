@@ -40,8 +40,6 @@ class MagnitudePruningModifier:
         self.global_sparsity = global_sparsity
         self.inter_pow = inter_pow
         self.log_wandb = log_wandb
-        # pruning hooks
-        self.hooks  = {}
         self.masks  = {}
         self.params = {}
         # set current sparsity
@@ -53,18 +51,17 @@ class MagnitudePruningModifier:
                 mask = torch.ones(param.shape, dtype=torch.bool, device=param.device)
 
                 self.masks[param_name]  = mask
-                self.hooks[param_name]  = param.register_hook(partial(mask_gradient_hook, mask))
                 self.params[param_name] = param
 
-    def check_mask_update(self, step: int):
+    def check_mask_update(self, step: int) -> bool:
         if (step - self.start_step) % self.update_frequency > 0:
-            return 
+            return False
         else:
             self.set_current_sparsity(step)
             if self.log_wandb:
                 wandb.log({'sparsity': self.current_sparsity}, step=step)
-                
             self.mask_update()
+            return True
 
     def set_current_sparsity(self, epoch):
         self.current_sparsity = polynomial_inter(
@@ -94,8 +91,6 @@ class MagnitudePruningModifier:
                 param.data = param * mask
 
                 self.masks[param_name] = mask
-                self.hooks[param_name].remove()
-                self.hooks[param_name]  = param.register_hook(partial(mask_gradient_hook, mask=mask))
         else:
             for param_name, param in self.params.items():
                 scores = param.abs().view(-1)
@@ -105,11 +100,6 @@ class MagnitudePruningModifier:
                 param.data = param * mask
 
                 self.masks[param_name] = mask
-                self.hooks[param_name].remove()
-                self.hooks[param_name] = param.register_hook(partial(mask_gradient_hook, mask=mask))
 
     def finalize(self):
-        for _, hook in self.hooks.items():
-            hook.remove()
         del self.masks
-        del self.hooks
