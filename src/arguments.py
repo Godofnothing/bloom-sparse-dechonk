@@ -95,3 +95,12 @@ class SparsificationArguments:
         default=-1, 
         metadata={"help": "Sparsity logging frequency."},
     )
+
+@dataclass
+class LRScheduleArguments:
+
+    # debug args
+    num_cycle_steps: int = field(
+        default=1, 
+        metadata={"help": "Number of steps in cyclic schedule."},
+    )

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
+import imp
 import sklearn
 import torch
 
@@ -16,10 +17,11 @@ from transformers import AutoTokenizer, HfArgumentParser, TrainingArguments, is_
 from transformers.trainer_utils import get_last_checkpoint
 
 import src.overrides
-from src.arguments import DataTrainingArguments, ModelArguments, SparsificationArguments
+from src.arguments import DataTrainingArguments, ModelArguments, SparsificationArguments, LRScheduleArguments
 from src.data import get_tokenized_lm_datasets, WrappedIterableDataset
 from src.magnitude_pruning_modifier import MagnitudePruningModifier
 from src.pruning_callback import PruningCallback
+from src.custom_lr_schedule import create_custom_scheduler
 
 
 logger = logging.getLogger(__name__)
@@ -28,9 +30,22 @@ logger = logging.getLogger(__name__)
 class TrainerWithSubsetEval(transformers.trainer.Trainer if src.overrides.Trainer is None else src.overrides.Trainer):
     """A modified huggingface Trainer that will only evaluate on a subset of validation data"""
 
-    def __init__(self, *args, eval_subset_size: int, **kwargs):
+    def __init__(self, *args, eval_subset_size: int, num_cycle_steps = None, **kwargs):
         super().__init__(*args, **kwargs)
         self.eval_subset_size = eval_subset_size
+        self.num_cycle_steps = num_cycle_steps
+
+    def create_scheduler(self, num_training_steps: int, optimizer: torch.optim.Optimizer = None):
+        if self.args.lr_scheduler_type in ['cyclic_linear', 'cyclic_cosine']:
+            if self.lr_scheduler is None:
+                self.lr_scheduler = create_custom_scheduler(
+                    self.args.lr_scheduler_type,
+                    optimizer=self.optimizer if optimizer is None else optimizer,
+                    num_warmup_steps=self.args.get_warmup_steps(num_training_steps),
+                    num_cycle_steps=self.num_cycle_steps
+                )
+        else:
+            super().create_scheduler(num_training_steps, optimizer)
 
     def evaluate(self, eval_dataset=None, **kwargs):
         eval_dataset = eval_dataset if eval_dataset is not None else self.eval_dataset
@@ -47,9 +62,10 @@ def main():
         ModelArguments, 
         DataTrainingArguments, 
         SparsificationArguments, 
-        TrainingArguments
+        LRScheduleArguments,
+        TrainingArguments,
     ))
-    model_args, data_args, sparse_args, training_args = parser.parse_args_into_dataclasses()
+    model_args, data_args, sparse_args, lr_sched_args, training_args = parser.parse_args_into_dataclasses()
 
     # Setup logging
     logging.basicConfig(
@@ -164,6 +180,7 @@ def main():
         compute_metrics=compute_metrics if training_args.do_eval and not is_torch_tpu_available() else None,
         preprocess_logits_for_metrics=preprocess_logits_for_metrics
         if training_args.do_eval and not is_torch_tpu_available() else None,
+        num_cycle_steps=lr_sched_args.num_cycle_steps,
         callbacks=[PruningCallback(pruning_modifier, sparse_args.sparsity_log_freq)]
     )
 
