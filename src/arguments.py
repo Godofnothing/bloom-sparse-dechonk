@@ -99,7 +99,10 @@ class SparsificationArguments:
 @dataclass
 class LRScheduleArguments:
 
-    # debug args
+    custom_lr_scheduler_type: Optional[str] = field(
+        default="", 
+        metadata={"help": "Which customized LR scheduler to use."}
+    )
     num_cycle_steps: int = field(
         default=1, 
         metadata={"help": "Number of steps in cyclic schedule."},

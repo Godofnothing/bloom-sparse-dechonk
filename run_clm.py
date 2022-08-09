@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import imp
-import sklearn
-import torch
-
 import logging
+import torch
 import math
 import os
 import sys
@@ -30,16 +27,17 @@ logger = logging.getLogger(__name__)
 class TrainerWithSubsetEval(transformers.trainer.Trainer if src.overrides.Trainer is None else src.overrides.Trainer):
     """A modified huggingface Trainer that will only evaluate on a subset of validation data"""
 
-    def __init__(self, *args, eval_subset_size: int, num_cycle_steps = None, **kwargs):
+    def __init__(self, *args, eval_subset_size: int, custom_lr_scheduler_type: str = "", num_cycle_steps = None, **kwargs):
         super().__init__(*args, **kwargs)
         self.eval_subset_size = eval_subset_size
+        self.custom_lr_scheduler_type = custom_lr_scheduler_type
         self.num_cycle_steps = num_cycle_steps
 
     def create_scheduler(self, num_training_steps: int, optimizer: torch.optim.Optimizer = None):
-        if self.args.lr_scheduler_type in ['cyclic_linear', 'cyclic_cosine']:
+        if self.custom_lr_scheduler_type in ['cyclic_linear', 'cyclic_cosine']:
             if self.lr_scheduler is None:
                 self.lr_scheduler = create_custom_scheduler(
-                    self.args.lr_scheduler_type,
+                    self.custom_lr_schedule_type,
                     optimizer=self.optimizer if optimizer is None else optimizer,
                     num_warmup_steps=self.args.get_warmup_steps(num_training_steps),
                     num_cycle_steps=self.num_cycle_steps
@@ -174,13 +172,15 @@ def main():
         train_dataset=train_dataset if training_args.do_train else None,
         eval_dataset=eval_dataset if training_args.do_eval else None,
         eval_subset_size=data_args.eval_subset_size,
+        # custom lr params
+        custom_lr_scheduler_type=lr_sched_args.custom_lr_scheduler_type,
+        num_cycle_steps=lr_sched_args.num_cycle_steps,
         tokenizer=tokenizer,
         # Data collator will default to DataCollatorWithPadding, so we change it.
         data_collator=data_collator,
         compute_metrics=compute_metrics if training_args.do_eval and not is_torch_tpu_available() else None,
         preprocess_logits_for_metrics=preprocess_logits_for_metrics
         if training_args.do_eval and not is_torch_tpu_available() else None,
-        num_cycle_steps=lr_sched_args.num_cycle_steps,
         callbacks=[PruningCallback(pruning_modifier, sparse_args.sparsity_log_freq)]
     )
 
