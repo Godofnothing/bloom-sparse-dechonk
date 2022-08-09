@@ -42,8 +42,9 @@ class TrainerWithSubsetEval(transformers.trainer.Trainer if src.overrides.Traine
                     num_warmup_steps=self.args.get_warmup_steps(num_training_steps),
                     num_cycle_steps=self.num_cycle_steps
                 )
+                return self.lr_scheduler
         else:
-            super().create_scheduler(num_training_steps, optimizer)
+            return super().create_scheduler(num_training_steps, optimizer)
 
     def evaluate(self, eval_dataset=None, **kwargs):
         eval_dataset = eval_dataset if eval_dataset is not None else self.eval_dataset
