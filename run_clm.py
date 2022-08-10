@@ -37,7 +37,7 @@ class TrainerWithSubsetEval(transformers.trainer.Trainer if src.overrides.Traine
         if self.custom_lr_scheduler_type in ['cyclic_linear', 'cyclic_cosine']:
             if self.lr_scheduler is None:
                 self.lr_scheduler = create_custom_scheduler(
-                    self.custom_lr_schedule_type,
+                    self.custom_lr_scheduler_type,
                     optimizer=self.optimizer if optimizer is None else optimizer,
                     num_warmup_steps=self.args.get_warmup_steps(num_training_steps),
                     num_cycle_steps=self.num_cycle_steps
@@ -45,6 +45,7 @@ class TrainerWithSubsetEval(transformers.trainer.Trainer if src.overrides.Traine
                 return self.lr_scheduler
         else:
             return super().create_scheduler(num_training_steps, optimizer)
+            
 
     def evaluate(self, eval_dataset=None, **kwargs):
         eval_dataset = eval_dataset if eval_dataset is not None else self.eval_dataset
